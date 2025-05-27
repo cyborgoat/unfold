@@ -325,8 +325,29 @@ def clear(cache_only: bool) -> None:
         searcher.clear_cache()
         console.print("[green]Search cache cleared[/green]")
     else:
-        # In a real implementation, you'd want confirmation here
-        console.print("[red]This would clear the entire database. Use --cache-only for now.[/red]")
+        console.print("[yellow]This command will clear the ENTIRE database and all indexed data.[/yellow]")
+        # Prompt for confirmation; aborts if user says no.
+        click.confirm("Are you absolutely sure you want to proceed? This action CANNOT be undone.", abort=True, err=True)
+        
+        try:
+            # Assumes DatabaseManager() connects to the default/configured database
+            # and that DatabaseManager is correctly imported at the top of the file.
+            db_manager = DatabaseManager()
+            if hasattr(db_manager, 'clear_all'):
+                db_manager.clear_all()
+                console.print("[green]Entire database and associated index cleared successfully.[/green]")
+            else:
+                # This case means the method is missing from DatabaseManager
+                console.print("[red]Error: The 'clear_all' method is not available in the DatabaseManager.[/red]")
+                console.print("Full database clear operation aborted. Please check your DatabaseManager implementation.")
+        except ImportError:
+            # This might occur if 'unfold.core.database' or 'DatabaseManager' has issues
+            console.print("[red]Error: Could not import or instantiate DatabaseManager.[/red]")
+            console.print("Please ensure it is correctly defined and its module is accessible.")
+        except Exception as e:
+            # Catch other potential errors during DB instantiation or 'clear_all' call
+            console.print(f"[red]An error occurred while clearing the database: {e}[/red]")
+            console.print("Please check database configuration, connectivity, and permissions.")
 
 
 # Add commands to the main group
