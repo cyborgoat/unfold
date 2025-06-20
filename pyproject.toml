@@ -2,26 +2,26 @@
 name = "unfold"
 version = "0.1.0"
 description = "A superfast file/folder locator with advanced indexing and search algorithms"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
-license = {text = "MIT"}
+authors = [{ name = "Your Name", email = "your.email@example.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
-    "watchdog>=3.0.0",
+    "watchdog>=6.0.0",
     "python-Levenshtein>=0.21.0",
     "click>=8.0.0",
-    "rich>=13.0.0",
+    "rich>=14.0.0",
     "textdistance>=4.5.0",
     "appdirs>=1.4.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "black>=25.1.0",
+    "flake8>=7.2.0",
+    "mypy>=1.15.0",
 ]
 
 [project.scripts]
@@ -39,4 +39,4 @@ target-version = ['py38']
 python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true 
+disallow_untyped_defs = true
