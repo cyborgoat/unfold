@@ -4,7 +4,7 @@ Advanced search engine with fuzzy matching, ranking, and caching.
 
 import os
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import textdistance
 from Levenshtein import distance as levenshtein_distance
@@ -15,7 +15,7 @@ from .database import DatabaseManager
 class SearchResult:
     """Represents a search result with ranking information."""
 
-    def __init__(self, file_info: Dict[str, Any], score: float, match_type: str):
+    def __init__(self, file_info: dict[str, Any], score: float, match_type: str):
         self.path = file_info["path"]
         self.name = file_info["name"]
         self.size = file_info.get("size")
@@ -27,7 +27,7 @@ class SearchResult:
         self.score = score
         self.match_type = match_type
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "path": self.path,
@@ -54,7 +54,7 @@ class FileSearcher:
 
     def __init__(
         self,
-        db_manager: Optional[DatabaseManager] = None,
+        db_manager: DatabaseManager | None = None,
         enable_fuzzy: bool = True,
         fuzzy_threshold: float = 0.6,
         max_results: int = 50,
@@ -124,7 +124,7 @@ class FileSearcher:
         return 0.0
 
     def _calculate_frequency_recency_score(
-        self, access_count: int, last_accessed: Optional[float]
+        self, access_count: int, last_accessed: float | None
     ) -> float:
         """Calculate frequency and recency score (FR algorithm)."""
         current_time = time.time()
@@ -145,7 +145,7 @@ class FileSearcher:
 
     def _get_match_type_and_base_score(
         self, query: str, name: str
-    ) -> Tuple[str, float]:
+    ) -> tuple[str, float]:
         """Determine match type and base score."""
         similarity = self._calculate_string_similarity(query, name)
 
@@ -165,7 +165,7 @@ class FileSearcher:
             return "no_match", 0.0
 
     def _apply_file_type_bonus(
-        self, query: str, file_type: Optional[str], base_score: float
+        self, query: str, file_type: str | None, base_score: float
     ) -> float:
         """Apply bonus for file type preferences."""
         if not file_type:
@@ -196,8 +196,8 @@ class FileSearcher:
         return base_score
 
     def _rank_results(
-        self, results: List[Dict[str, Any]], query: str
-    ) -> List[SearchResult]:
+        self, results: list[dict[str, Any]], query: str
+    ) -> list[SearchResult]:
         """Rank search results using multiple algorithms."""
         ranked_results = []
 
@@ -237,10 +237,10 @@ class FileSearcher:
     def search(
         self,
         query: str,
-        file_types: Optional[List[str]] = None,
+        file_types: list[str] | None = None,
         directories_only: bool = False,
         files_only: bool = False,
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Perform advanced search with ranking and filtering.
 
@@ -294,12 +294,12 @@ class FileSearcher:
 
         return ranked_results
 
-    def search_by_pattern(self, pattern: str) -> List[SearchResult]:
+    def search_by_pattern(self, pattern: str) -> list[SearchResult]:
         """Search files using glob-like patterns."""
         # This could be extended to support regex or glob patterns
         return self.search(pattern)
 
-    def get_recent_files(self, limit: int = 20) -> List[SearchResult]:
+    def get_recent_files(self, limit: int = 20) -> list[SearchResult]:
         """Get most recently accessed files."""
 
         cursor = self.db.conn.cursor()
@@ -325,7 +325,7 @@ class FileSearcher:
 
         return search_results
 
-    def get_frequent_files(self, limit: int = 20) -> List[SearchResult]:
+    def get_frequent_files(self, limit: int = 20) -> list[SearchResult]:
         """Get most frequently accessed files."""
 
         cursor = self.db.conn.cursor()
@@ -360,7 +360,7 @@ class FileSearcher:
         cursor.execute("DELETE FROM search_cache")
         self.db.conn.commit()
 
-    def get_search_stats(self) -> Dict[str, Any]:
+    def get_search_stats(self) -> dict[str, Any]:
         """Get search engine statistics."""
         stats = self.db.get_stats()
         stats.update(

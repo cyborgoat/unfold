@@ -1,0 +1,33 @@
+Based on this project, I'd like to add new features and fix the issues from the existing ones
+
+## Fixes
+
+- The watchdog service is not really monitoring the filesystem status and do the real-time indexing job
+
+## New features
+
+### LLM Service
+
+1. This app now integrates with LLM to perforce file search/edit/create/question answering service, and the LLM is provided by ollama server(https://github.com/ollama/ollama-python) or OpenAI compatible Endpoints
+2. The CLI utility now can let user enter the AI assistant model, which can perform the functions above and also the search engine capabilities already implemented in this codebase
+3. The LLM service supports for streaming output 
+
+### Vector DB & Knowledge Graph
+
+Now this app can integrate vector DB with Milvus (https://milvus.io/docs/quickstart.md):
+
+1. The vector DB and  only interact with a new folder called `knowledge/`:
+    - `knowledge/files`: The vector db index the file contents(only support text files like txt, json, md for now)
+    - `knowledge/memory`
+        - short_memory:the vector db stores the current chat session to understand context (what's goingon for this conversation, what are the key points should be stored, what actions user took)
+        - long_memory: the vector db stores (everytime user ends a chat session, the long term memory summarize the conversation into a compact form for future LLM chat reference), making the AI assistant gets 'smarter and smarter'
+    - `knowledge/graph`(Use  Neo4j's grpahRAG https://neo4j.com/blog/news/graphrag-python-package/): 
+        - This graph stores the inner relationships from each file of `knowledge/files`
+        - The graph can be visually displayed if user wants to take a look
+
+### MCP Protocol
+
+1. Now all functions and tools should be wrapped into a FastMCP Service (https://github.com/jlowin/fastmcp), and the AI assistant should use the llm's function calling skill to decide what tool need to be called and invokded
+
+
+

@@ -2,17 +2,18 @@
 Database management for file indexing using SQLite.
 """
 
-import sqlite3
-import os
 import json
-from typing import List, Dict, Optional, Any
+import os
+import sqlite3
+from typing import Any
+
 import appdirs
 
 
 class DatabaseManager:
     """Manages SQLite database for file indexing and metadata storage."""
 
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         if db_path is None:
             app_dir = appdirs.user_data_dir("unfold", "unfold")
             os.makedirs(app_dir, exist_ok=True)
@@ -81,7 +82,7 @@ class DatabaseManager:
 
         self.conn.commit()
 
-    def insert_file(self, file_info: Dict[str, Any]) -> int:
+    def insert_file(self, file_info: dict[str, Any]) -> int:
         """Insert or update file information."""
         cursor = self.conn.cursor()
 
@@ -107,7 +108,7 @@ class DatabaseManager:
         self.conn.commit()
         return file_id
 
-    def insert_keywords(self, file_id: int, keywords: List[str]) -> None:
+    def insert_keywords(self, file_id: int, keywords: list[str]) -> None:
         """Insert keywords for inverted index."""
         cursor = self.conn.cursor()
 
@@ -126,7 +127,7 @@ class DatabaseManager:
 
         self.conn.commit()
 
-    def search_files(self, query: str, limit: int = 50) -> List[sqlite3.Row]:
+    def search_files(self, query: str, limit: int = 50) -> list[sqlite3.Row]:
         """Search files by query using various matching strategies."""
         cursor = self.conn.cursor()
 
@@ -199,7 +200,7 @@ class DatabaseManager:
 
         self.conn.commit()
 
-    def cache_search(self, query: str, results: List[Dict]) -> None:
+    def cache_search(self, query: str, results: list[dict]) -> None:
         """Cache search results for faster retrieval."""
         import time
 
@@ -216,7 +217,7 @@ class DatabaseManager:
 
         self.conn.commit()
 
-    def get_cached_search(self, query: str) -> Optional[List[Dict]]:
+    def get_cached_search(self, query: str) -> list[dict] | None:
         """Retrieve cached search results."""
         cursor = self.conn.cursor()
 
@@ -269,7 +270,7 @@ class DatabaseManager:
 
         self.conn.commit()
 
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         """Get database statistics."""
         cursor = self.conn.cursor()
 

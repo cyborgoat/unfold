@@ -1,0 +1,166 @@
+# Unfold Ignore File
+# Patterns for files and directories to exclude from indexing
+
+# Temporary and cache files
+*.tmp
+*.temp
+*.cache
+*.log
+*.bak
+*.backup
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Development and build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.whl
+
+# Version control
+.git/
+.gitignore
+.svn/
+.hg/
+.bzr/
+CVS/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vimrc
+.emacs*
+
+# Node.js and JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+.pnp.*
+
+# Python environments
+venv/
+env/
+.env
+.venv
+ENV/
+env.bak/
+venv.bak/
+.conda/
+.pyenv/
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose*.yml
+.docker/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+.gradle/
+build.gradle
+
+# C/C++
+*.o
+*.a
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Archives and compressed files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.bz2
+*.xz
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large media files
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.mp3
+*.wav
+*.flac
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.pdf
+
+# AI and ML model files
+*.model
+*.pkl
+*.pickle
+*.h5
+*.onnx
+*.pb
+*.pth
+*.weights
+
+# Documentation builds
+_build/
+.doctrees/
+docs/_build/
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage.*
+coverage.xml
+*.cover
+
+# OS specific
+.fuse_hidden*
+.Trash-*
+.nfs*
+
+# Logs and runtime
+*.pid
+*.log.*
+logs/
+
+# Unfold specific - exclude knowledge base from indexing itself
+knowledge/
+*.milvus
+*.neo4j
+
+# Configuration files that might contain secrets
+.env.local
+.env.production
+config/secrets.yml
+secrets/

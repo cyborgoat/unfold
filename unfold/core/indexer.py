@@ -2,43 +2,143 @@
 File system indexer with real-time monitoring and metadata extraction.
 """
 
+import logging
 import os
-import time
 import threading
+import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import List, Dict, Set, Optional, Callable
+
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from .database import DatabaseManager
 
 
 class IndexingHandler(FileSystemEventHandler):
-    """File system event handler for real-time indexing."""
+    """File system event handler for real-time indexing with AI services."""
 
     def __init__(self, indexer: "FileIndexer"):
         self.indexer = indexer
+        self.logger = logging.getLogger(__name__)
+
+        # Initialize AI services for indexing
+        from unfold.utils.config import ConfigManager
+        config_manager = ConfigManager()
+
+        # Initialize graph service
+        try:
+            graph_provider = config_manager.get("graph_db.provider", "networkx")
+            if graph_provider == "networkx":
+                from .networkx_graph_service import NetworkXGraphService
+                self.graph_service = NetworkXGraphService(config_manager)
+            else:
+                try:
+                    from .graph_service import GraphService
+                    self.graph_service = GraphService(config_manager)
+                except ImportError:
+                    # Fallback to NetworkX if Neo4j GraphService not available
+                    from .networkx_graph_service import NetworkXGraphService
+                    self.graph_service = NetworkXGraphService(config_manager)
+        except Exception as e:
+            self.logger.warning(f"Graph service not available: {e}")
+            self.graph_service = None
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file/directory creation."""
         if not event.is_directory or self.indexer.index_directories:
-            self.indexer._index_single_path(event.src_path)
+            self._process_file_event("created", event.src_path)
 
     def on_modified(self, event: FileSystemEvent) -> None:
         """Handle file/directory modification."""
         if not event.is_directory or self.indexer.index_directories:
-            self.indexer._index_single_path(event.src_path)
+            self._process_file_event("modified", event.src_path)
 
     def on_moved(self, event: FileSystemEvent) -> None:
         """Handle file/directory move."""
-        # Remove old path and index new path
+        # Remove old path from all services
         self.indexer.db.remove_file(event.src_path)
+
+        # Index new path if it's not a directory or we index directories
         if not event.is_directory or self.indexer.index_directories:
-            self.indexer._index_single_path(event.dest_path)
+            self._process_file_event("moved", event.dest_path, event.src_path)
 
     def on_deleted(self, event: FileSystemEvent) -> None:
         """Handle file/directory deletion."""
         self.indexer.db.remove_file(event.src_path)
+        self.logger.info(f"Removed file from index: {event.src_path}")
+
+    def _process_file_event(self, event_type: str, file_path: str, old_path: str = None):
+        """Process file events and update all relevant services."""
+        try:
+            # Index file in traditional database
+            self.indexer._index_single_path(file_path)
+
+            # If AI services are available, also index in vector DB and graph
+            if hasattr(self.indexer, 'vector_db') and self.indexer.vector_db:
+                self._index_in_vector_db(file_path)
+
+            if hasattr(self.indexer, 'graph_service') and self.indexer.graph_service:
+                self._index_in_knowledge_graph(file_path)
+
+                # Remove old graph node if this was a move operation
+                if old_path and event_type == "moved":
+                    self.indexer.graph_service.remove_file_node(old_path)
+
+            self.logger.info(f"Processed {event_type} event for: {file_path}")
+
+        except Exception as e:
+            self.logger.error(f"Error processing {event_type} event for {file_path}: {e}")
+
+    def _index_in_vector_db(self, file_path: str):
+        """Index file content in vector database."""
+        try:
+            path_obj = Path(file_path)
+            if path_obj.is_file() and self._is_text_file(file_path):
+                with open(path_obj, encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+
+                # Index content in vector database
+                self.indexer.vector_db.index_file_content(
+                    file_path=file_path,
+                    content=content,
+                    metadata={"indexed_at": time.time()}
+                )
+        except Exception as e:
+            self.logger.error(f"Error indexing {file_path} in vector DB: {e}")
+
+    def _index_in_knowledge_graph(self, file_path: str):
+        """Index file in knowledge graph."""
+        try:
+            path_obj = Path(file_path)
+            content = None
+
+            # Read content for code files to extract relationships
+            if path_obj.is_file() and self._is_code_file(file_path):
+                try:
+                    with open(path_obj, encoding='utf-8', errors='ignore') as f:
+                        content = f.read()
+                except Exception:
+                    pass  # Continue without content if read fails
+
+            # Index in knowledge graph
+            if self.graph_service:
+                self.graph_service.index_file(
+                    file_path=file_path,
+                    content=content
+                )
+        except Exception as e:
+            self.logger.error(f"Error indexing {file_path} in knowledge graph: {e}")
+
+    def _is_text_file(self, file_path: str) -> bool:
+        """Check if file is a text file for vector indexing."""
+        text_extensions = {'.txt', '.md', '.json', '.py', '.js', '.ts', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.php', '.html', '.css', '.xml', '.yaml', '.yml'}
+        return Path(file_path).suffix.lower() in text_extensions
+
+    def _is_code_file(self, file_path: str) -> bool:
+        """Check if file is a code file for relationship extraction."""
+        code_extensions = {'.py', '.js', '.ts', '.java', '.cpp', '.c', '.h', '.go', '.rs', '.php'}
+        return Path(file_path).suffix.lower() in code_extensions
 
 
 class FileIndexer:
@@ -49,11 +149,11 @@ class FileIndexer:
 
     def __init__(
         self,
-        db_manager: Optional[DatabaseManager] = None,
+        db_manager: DatabaseManager | None = None,
         index_directories: bool = True,
         index_hidden: bool = False,
-        excluded_extensions: Optional[Set[str]] = None,
-        excluded_paths: Optional[Set[str]] = None,
+        excluded_extensions: set[str] | None = None,
+        excluded_paths: set[str] | None = None,
     ):
         self.db = db_manager or DatabaseManager()
         self.index_directories = index_directories
@@ -76,6 +176,7 @@ class FileIndexer:
         self.observer = Observer()
         self.is_monitoring = False
         self._stop_event = threading.Event()
+        self.logger = logging.getLogger(__name__)
 
     def _should_index(self, path: str) -> bool:
         """Determine if a path should be indexed."""
@@ -96,7 +197,7 @@ class FileIndexer:
 
         return True
 
-    def _extract_keywords(self, file_path: str, file_name: str) -> List[str]:
+    def _extract_keywords(self, file_path: str, file_name: str) -> list[str]:
         """Extract keywords from filename and path for inverted indexing."""
         keywords = set()
 
@@ -125,7 +226,7 @@ class FileIndexer:
 
         return list(keywords)
 
-    def _get_file_metadata(self, file_path: str) -> Dict[str, any]:
+    def _get_file_metadata(self, file_path: str) -> dict[str, any]:
         """Extract file metadata."""
         try:
             path_obj = Path(file_path)
@@ -141,7 +242,7 @@ class FileIndexer:
                 "is_directory": path_obj.is_dir(),
                 "indexed_time": time.time(),
             }
-        except (OSError, IOError) as e:
+        except OSError as e:
             print(f"Error getting metadata for {file_path}: {e}")
             return None
 
@@ -165,7 +266,7 @@ class FileIndexer:
         self,
         directory: str,
         recursive: bool = True,
-        progress_callback: Optional[Callable[[int, str], None]] = None,
+        progress_callback: Callable[[int, str], None] | None = None,
     ) -> None:
         """Index a directory and optionally its subdirectories."""
         directory_path = Path(directory)
@@ -194,10 +295,36 @@ class FileIndexer:
         if progress_callback:
             progress_callback(file_count, "Indexing complete")
 
-    def start_monitoring(self, paths: List[str]) -> None:
+    def start_monitoring(self, paths: list[str]) -> None:
         """Start real-time file system monitoring."""
         if self.is_monitoring:
             return
+
+        self.logger.info(f"Starting real-time monitoring for paths: {paths}")
+
+        # Clear stop event
+        self._stop_event.clear()
+
+        # Add paths to be monitored
+        for path in paths:
+            if Path(path).exists():
+                self.observer.schedule(
+                    IndexingHandler(self),
+                    path,
+                    recursive=True
+                )
+                self.logger.info(f"Added monitoring for: {path}")
+            else:
+                self.logger.warning(f"Path does not exist: {path}")
+
+        # Start the observer
+        try:
+            self.observer.start()
+            self.is_monitoring = True
+            self.logger.info("File system monitoring started successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to start monitoring: {e}")
+            raise
 
         self.is_monitoring = True
         self._stop_event.clear()
@@ -222,8 +349,8 @@ class FileIndexer:
 
     def rebuild_index(
         self,
-        paths: List[str],
-        progress_callback: Optional[Callable[[int, str], None]] = None,
+        paths: list[str],
+        progress_callback: Callable[[int, str], None] | None = None,
     ) -> None:
         """Rebuild the entire index from scratch."""
         # Clear existing index
@@ -249,7 +376,7 @@ class FileIndexer:
                 total_files, f"Rebuild complete: {total_files} items indexed"
             )
 
-    def get_indexing_stats(self) -> Dict[str, any]:
+    def get_indexing_stats(self) -> dict[str, any]:
         """Get indexing statistics."""
         return {
             "is_monitoring": self.is_monitoring,

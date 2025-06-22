@@ -1,8 +1,8 @@
 [project]
 name = "unfold"
-version = "0.1.0"
-description = "A superfast file/folder locator with advanced indexing and search algorithms"
-authors = [{ name = "Your Name", email = "your.email@example.com" }]
+version = "0.2.0"
+description = "AI-Enhanced superfast file/folder locator with advanced indexing, search algorithms, and intelligent assistance"
+authors = [{ name = "cyborgoat", email = "your.email@example.com" }]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,33 +10,64 @@ dependencies = [
     "watchdog>=6.0.0",
     "python-Levenshtein>=0.21.0",
     "click>=8.0.0",
-    "rich>=14.0.0",
+    "rich>=13.9.4,<14.0.0",
     "textdistance>=4.5.0",
     "appdirs>=1.4.4",
+    # AI and LLM integration
+    "fastmcp>=1.0.0",
+    "ollama>=0.5.0",
+    "openai>=1.0.0",
+    "httpx>=0.27.0",
+    # Vector Database
+    "pymilvus>=2.3.9",
+    "sentence-transformers>=3.0.0",
+    # Graph Database
+    "neo4j>=5.28.0",
+    "networkx>=3.0",
+    "graphrag>=2.3.0",
+    # Additional utilities
+    "pydantic>=2.10.0",
+    "asyncio-mqtt>=0.16.0",
+    "python-dotenv>=1.0.0",
+    "matplotlib>=3.5.0",
+    "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
-    "black>=25.1.0",
-    "flake8>=7.2.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.1.0",
     "mypy>=1.15.0",
 ]
 
 [project.scripts]
-unfold = "unfold.cli:main"
+unfold = "unfold.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.black]
+[tool.ruff]
 line-length = 88
-target-version = ['py38']
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "T20"]
+ignore = ["E501", "S101", "S603", "S607"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0",
+]

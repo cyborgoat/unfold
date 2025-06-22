@@ -1,0 +1,217 @@
+@startuml
+!theme vibrant
+
+title Unfold Application Sequence Diagram (Modular Refactored Architecture)
+
+actor User
+
+box "Presentation Layer" #LightBlue
+    participant CLI as "CLI Commands\n(ai.py, mcp.py)"
+    participant ToolMonitor as "Tool Call Monitor\n(displays tool usage)"
+end box
+
+box "Service Orchestration Layer" #Plum
+    participant MCPService as "MCP Service\n(orchestrator)"
+    participant UnfoldTools as "Unfold Tools\n(main coordinator)"
+end box
+
+box "Modular Tool Layer" #LightYellow
+    participant FilesystemTools as "Filesystem Tools\n(file operations)"
+    participant SearchTools as "Search Tools\n(indexing & search)"
+    participant AnalysisTools as "Analysis Tools\n(AI-powered analysis)"
+    participant SystemTools as "System Tools\n(commands & info)"
+    participant MemoryTools as "Memory Tools\n(conversation memory)"
+    participant VisualizationTools as "Visualization Tools\n(graph display)"
+end box
+
+box "AI & Core Services" #LightGreen
+    participant LLMService as "LLM Service\n(Ollama/OpenAI)"
+    participant VectorDB as "Vector DB Service\n(Milvus Lite)"
+    participant GraphService as "Graph Service\n(NetworkX)"
+end box
+
+box "Data Layer" #LightCoral
+    participant DatabaseManager as "Database Manager\n(SQLite)"
+    participant FileIndexer as "File Indexer\n(file metadata)"
+    participant FileSearcher as "File Searcher\n(search engine)"
+end box
+
+== AI Assistant Flow (Question Answering) ==
+
+User -> CLI: Executes `unfold ai` and enters prompt "Summarize project structure"
+activate CLI
+
+CLI -> ToolMonitor: Initialize tool call monitoring
+activate ToolMonitor
+ToolMonitor -> CLI: Shows available tools summary
+CLI -> MCPService: Initialize MCP service with tools
+activate MCPService
+
+MCPService -> UnfoldTools: Initialize tool coordinator
+activate UnfoldTools
+
+UnfoldTools -> FilesystemTools: Initialize filesystem operations
+UnfoldTools -> SearchTools: Initialize search capabilities  
+UnfoldTools -> AnalysisTools: Initialize AI analysis
+UnfoldTools -> SystemTools: Initialize system operations
+UnfoldTools -> MemoryTools: Initialize memory management
+UnfoldTools -> VisualizationTools: Initialize graph visualization
+
+CLI -> MCPService: Sends prompt to AI Assistant
+MCPService -> LLMService: Forwards prompt with available tools
+activate LLMService
+
+note right of LLMService
+LLM analyzes the prompt.
+Determines it needs to understand project structure.
+Decides to call the `analyze_project_structure` tool.
+end note
+
+LLMService -> MCPService: `analyze_project_structure()`
+MCPService -> UnfoldTools: Delegates to analysis tools
+UnfoldTools -> AnalysisTools: `analyze_project_structure()`
+activate AnalysisTools
+
+AnalysisTools -> SearchTools: `list_directory()` for structure
+activate SearchTools
+SearchTools -> FilesystemTools: `list_directory()` 
+activate FilesystemTools
+FilesystemTools -> FileIndexer: Get file metadata
+activate FileIndexer
+FileIndexer -> DatabaseManager: Query file database
+activate DatabaseManager
+DatabaseManager --> FileIndexer: Returns file records
+deactivate DatabaseManager
+FileIndexer --> FilesystemTools: Returns file metadata
+deactivate FileIndexer
+FilesystemTools --> SearchTools: Returns directory listing
+deactivate FilesystemTools
+SearchTools --> AnalysisTools: Returns structured data
+deactivate SearchTools
+
+AnalysisTools -> LLMService: Uses LLM for analysis
+LLMService -> AnalysisTools: Returns analysis insights
+AnalysisTools --> UnfoldTools: Returns project analysis
+deactivate AnalysisTools
+UnfoldTools --> MCPService: Returns analysis results
+MCPService -> ToolMonitor: Notify tool usage
+ToolMonitor -> CLI: Display "🔧 analyze_project_structure: AI-powered project analysis..."
+
+note right of LLMService
+LLM also decides to store insights in memory.
+Decides to call the `store_memory` tool.
+end note
+
+LLMService -> MCPService: `store_memory(insights)`
+MCPService -> UnfoldTools: Delegates to memory tools
+UnfoldTools -> MemoryTools: `store_memory()`
+activate MemoryTools
+MemoryTools -> VectorDB: Store conversation context
+activate VectorDB
+VectorDB --> MemoryTools: Acknowledges storage
+deactivate VectorDB
+MemoryTools --> UnfoldTools: Returns success
+deactivate MemoryTools
+UnfoldTools --> MCPService: Returns memory result
+MCPService -> ToolMonitor: Notify tool usage
+ToolMonitor -> CLI: Display "🔧 store_memory: Store information in memory..."
+
+LLMService -> MCPService: Streams response tokens
+MCPService -> CLI: Streams response tokens
+CLI --> User: Displays streaming response with tool notifications
+
+deactivate LLMService
+deactivate UnfoldTools
+deactivate MCPService
+deactivate ToolMonitor
+deactivate CLI
+
+== Traditional Search (as a Tool) ==
+
+User -> CLI: Enters prompt "find config files" into AI assistant
+activate CLI
+CLI -> MCPService: Forwards prompt
+activate MCPService
+MCPService -> LLMService: Forwards prompt
+activate LLMService
+
+note right of LLMService
+LLM interprets this as a file search request.
+Decides to call the `search_files` tool.
+end note
+
+LLMService -> MCPService: `search_files("config")`
+MCPService -> ToolMonitor: Notify tool usage
+ToolMonitor -> CLI: Display "🔧 search_files: Search for files using traditional search..."
+
+MCPService -> UnfoldTools: Delegates to search tools
+activate UnfoldTools
+UnfoldTools -> SearchTools: `search_files("config")`
+activate SearchTools
+
+SearchTools -> FileSearcher: `search("config")`
+activate FileSearcher
+FileSearcher -> DatabaseManager: `search_files("config")`
+activate DatabaseManager
+DatabaseManager --> FileSearcher: Returns raw results
+deactivate DatabaseManager
+FileSearcher --> SearchTools: Returns ranked results
+deactivate FileSearcher
+
+SearchTools --> UnfoldTools: Returns search results
+deactivate SearchTools
+UnfoldTools --> MCPService: Returns formatted results
+deactivate UnfoldTools
+
+MCPService -> LLMService: Returns search results as tool output
+LLMService -> MCPService: Streams formatted answer
+MCPService -> CLI: Streams formatted answer
+CLI --> User: Displays final answer from AI with tool notifications
+
+deactivate LLMService
+deactivate MCPService
+deactivate CLI
+
+== End of Session ==
+User -> CLI: Ends session
+activate CLI
+
+CLI -> MCPService: Signal end of session
+activate MCPService
+
+MCPService -> UnfoldTools: Initiate session cleanup
+activate UnfoldTools
+
+UnfoldTools -> MemoryTools: `summarize_conversation()`
+activate MemoryTools
+MemoryTools -> LLMService: Generate conversation summary
+activate LLMService
+LLMService --> MemoryTools: Returns summary
+deactivate LLMService
+
+MemoryTools -> VectorDB: `store_long_term_memory(summary)`
+activate VectorDB
+VectorDB --> MemoryTools: Acknowledges write
+deactivate VectorDB
+
+MemoryTools -> VectorDB: `clear_short_term_memory()`
+activate VectorDB
+VectorDB --> MemoryTools: Acknowledges write
+deactivate VectorDB
+
+MemoryTools --> UnfoldTools: Returns cleanup status
+deactivate MemoryTools
+
+UnfoldTools -> SystemTools: `clear_cache()`
+activate SystemTools
+SystemTools --> UnfoldTools: Cache cleared
+deactivate SystemTools
+
+UnfoldTools --> MCPService: Session cleanup complete
+deactivate UnfoldTools
+
+MCPService -> CLI: Cleanup acknowledgment
+deactivate MCPService
+deactivate CLI
+
+@enduml
